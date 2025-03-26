@@ -1,10 +1,14 @@
-const { Client, GatewayIntentBits, EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, AttachmentBuilder, REST, Routes, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 require('dotenv').config();
 
 // ===================== 🌸 KONSTANTA UTAMA =====================
 const BOT_INFO = {
   NAME: 'Heizou The Helper',
-  VERSION: '🌸 Sakura Edition v1.1.4',
+  VERSION: '🌸 Sakura Edition v1.2',
+};
+
+const FLAGS = {
+  EPHEMERAL: 64
 };
 
 const CONFIG = {
@@ -34,7 +38,7 @@ const CONFIG = {
     },
     TIKTOK_RENREN: 'https://www.tiktok.com/@ayniman4',
     TIKTOK_SUKINANEKO: 'https://www.tiktok.com/@sukinaneko',
-    GITHUB: 'https://github.com/Allister1960/Bot-Discord',
+    GITHUB: 'https://github.com/Allister1960/Bot-Discord-GitHub',
     SUPPORT: 'https://discord.gg/your-invite'
   },
   
@@ -62,22 +66,108 @@ const CONFIG = {
   MESSAGES: {
     WELCOME: `${BOT_INFO.NAME} siap membantu!`,
     HELP: [
-      '🌸 !admin - Info admin server',
-      '📮 !sociabuzz - Link donasi admin',
-      '🔗 !invitelink - Buat invite link',
-      '🎥 !tiktok - Info TikTok admin',
-      '🐞 !bug - Lapor bug/error',
-      '💤 !afk - Set status AFK',
-      '🎉 !giveaway - Memulai Giveaway (Staff) | (⚠️Experimental)',
-      '📝 !check - Check durasi nyala Bot (Detik)',
-      '⚠️ !shutdown - Matikan bot (Owner)',
-      '🤖 !vbot - Info tentang bot',
-      '📌 !status - Update status (Staff)'
+      '🌸 /admin - Info admin server',
+      '📮 /sociabuzz - Link donasi admin',
+      '🔗 /invitelink - Buat invite link',
+      '🎥 /tiktok - Info TikTok admin',
+      '🐞 /bug - Lapor bug/error',
+      '💤 /afk - Set status AFK',
+      '🎉 /giveaway - Memulai Giveaway (Staff)',
+      '📝 /check - Check durasi nyala Bot',
+      '⚠️ /shutdown - Matikan bot (Owner)',
+      '🤖 /vbot - Info tentang bot',
+      '📌 /status - Update status (Staff)'
     ]
   },
   
   BOT: BOT_INFO
 };
+
+// ===================== ⚡ DAFTAR SLASH COMMAND =====================
+const commands = [
+  {
+    name: 'help',
+    description: 'Dapatkan menu bantuan privat'
+  },
+  {
+    name: 'admin',
+    description: 'Lihat info admin server'
+  },
+  {
+    name: 'tiktok',
+    description: 'Info akun TikTok admin'
+  },
+  {
+    name: 'afk',
+    description: 'Set status AFK',
+    options: [{
+      name: 'reason',
+      type: 3,
+      description: 'Alasan AFK',
+      required: false
+    }]
+  },
+  {
+    name: 'invitelink',
+    description: 'Buat invite link server'
+  },
+  {
+    name: 'vbot',
+    description: 'Info versi bot'
+  },
+  {
+    name: 'status',
+    description: 'Ubah status (Staff only)',
+    options: [{
+      name: 'status',
+      type: 3,
+      description: 'Status baru',
+      required: true
+    }]
+  },
+  {
+    name: 'sociabuzz',
+    description: 'Link donasi Sociabuzz admin'
+  },
+  {
+    name: 'giveaway',
+    description: 'Mulai giveaway (Staff only)',
+    options: [
+      {
+        name: 'prize',
+        type: 3,
+        description: 'Hadiah giveaway',
+        required: true
+      },
+      {
+        name: 'duration',
+        type: 3,
+        description: 'Durasi (contoh: 24h)',
+        required: true
+      }
+    ]
+  },
+  {
+    name: 'check',
+    description: 'Cek durasi aktif bot'
+  },
+  {
+    name: 'shutdown',
+    description: 'Matikan bot (Owner only)'
+  },
+  {
+    name: 'bug',
+    description: 'Laporkan bug ke developer',
+    options: [{
+      name: 'description',
+      type: 3,
+      description: 'Deskripsi bug',
+      required: true
+    }]
+  }
+];
+
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 // ===================== 🛠️ SISTEM DATA =====================
 let afkUsers = {};
@@ -116,558 +206,431 @@ client.once('ready', async () => {
   console.log(`${CONFIG.BOT.NAME} Aktif!\nCredit: Suki na Neko's Team\nMain Developer: Renren`);
   
   try {
+
+// ===================== ⚡ SLASH COMMAND REGISTRATION =====================
+const registerCommands = async () => {
+    try {
+      await rest.put(
+        Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+        { body: commands }
+      );
+      console.log(`🔗 Slash commands terdaftar (${commands.length} command)`);
+    } catch (error) {
+      console.error('❌ Gagal registrasi command:', error.message);
+    }
+  };
+  registerCommands();
+
+    // Send status message
     const iconAttachment = new AttachmentBuilder(CONFIG.DESIGN.IMAGES.ICON);
     const bannerAttachment = new AttachmentBuilder(CONFIG.DESIGN.IMAGES.BANNER);
-    const iconGifAttachment = new AttachmentBuilder(CONFIG.DESIGN.IMAGES.ICON);
-
     const channel = client.channels.cache.get(CONFIG.CHANNELS.STATUS);
+    
     if (channel) {
       await channel.send({
         embeds: [createHeizouEmbed(
-          'Bot Aktif!',
+          'Halo👋! Bot Aktif untuk membantu 🟢',
           CONFIG.MESSAGES.WELCOME,
           CONFIG.DESIGN.COLORS.SECONDARY
-        )
-        .setThumbnail('attachment://heizou_icon.png')
-        .setImage('attachment://heizou_banner.png')],
+        ).setThumbnail('attachment://heizou_icon.png').setImage('attachment://heizou_banner.png')],
         files: [iconAttachment, bannerAttachment]
       });
     }
   } catch (error) {
-    console.error('Gagal mengirim pesan status:', error);
+    console.error('Error during startup:', error);
   }
 });
 
-client.on('messageCreate', async (message) => {
-  if (message.author.bot) return;
+// ===================== 🎮 HANDLER SLASH COMMANDS =====================
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isCommand()) return;
 
-  // Handler AFK Return
-  if (afkUsers[message.author.id]) {
-    const data = afkUsers[message.author.id];
-    const duration = Math.floor((Date.now() - data.timestamp) / 1000);
-    
-    delete afkUsers[message.author.id];
-    
-    try {
-      await message.member.setNickname(
-        message.member.displayName.replace('[AFK] ', '')
-      );
-    } catch (error) {
-      console.error('Gagal reset nickname:', error);
+  // Dismiss Button Component
+  const dismissButton = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('dismiss')
+      .setLabel('Tutup Pesan')
+      .setStyle(ButtonStyle.Secondary)
+  );
+
+  try {
+    switch(interaction.commandName) {
+      case 'help': {
+        const helpMessage = `Halo <@${interaction.user.id}>! Jika ada pertanyaan, DM Admin <@${CONFIG.USERS.RENREN}>.\n\n${CONFIG.MESSAGES.HELP.join('\n')}`;
+        
+        await interaction.reply({
+  flags: FLAGS.EPHEMERAL,
+          embeds: [
+            createHeizouEmbed(
+              'Menu Bantuan Privat 🌸',
+              helpMessage,
+              CONFIG.DESIGN.COLORS.SECONDARY
+            )
+          ],
+          components: [dismissButton]
+        });
+        break;
+      }
+
+      case 'admin': {
+        const adminFields = Object.values(CONFIG.USERS)
+          .filter(userId => adminStatus[userId])
+          .map(userId => ({
+            name: `${adminStatus[userId].status}`,
+            value: `${CONFIG.DESIGN.EMOJI.ADMIN} <@${userId}>\n**Jabatan:** ${adminStatus[userId].role}`,
+            inline: true
+          }));
+
+        await interaction.reply({
+  flags: FLAGS.EPHEMERAL,
+          embeds: [
+            createHeizouEmbed(
+              '🌸 Tim Administrator',
+              'Daftar admin dan status terkini:',
+              CONFIG.DESIGN.COLORS.PRIMARY
+            ).addFields(adminFields)
+          ],
+          components: [dismissButton]
+        });
+        break;
+      }
+
+      case 'tiktok': {
+        const tiktokIcon = new AttachmentBuilder(CONFIG.DESIGN.IMAGES.TIKTOK_ICON);
+        
+        await interaction.reply({
+  flags: FLAGS.EPHEMERAL,
+          files: [tiktokIcon],
+          embeds: [
+            createHeizouEmbed(
+              '📱 TikTok Resmi',
+              `**Daftar akun TikTok admin**:\n` +
+              `${CONFIG.DESIGN.EMOJI.LINK} **Renren**: [@ayniman4](${CONFIG.LINKS.TIKTOK_RENREN})\n` +
+              `${CONFIG.DESIGN.EMOJI.LINK} **Suki na Neko**: [@sukinaneko](${CONFIG.LINKS.TIKTOK_SUKINANEKO})`,
+              CONFIG.DESIGN.COLORS.SECONDARY
+            ).setThumbnail('attachment://tiktok_icon.png')
+          ],
+          components: [dismissButton]
+        });
+        break;
+      }
+
+      case 'afk': {
+        const reason = interaction.options.getString('reason') || 'Sedang AFK';
+        const member = interaction.member;
+        
+        afkUsers[interaction.user.id] = {
+          timestamp: Date.now(),
+          reason: reason,
+          originalNickname: member.nickname || member.user.username
+        };
+
+        try {
+          await member.setNickname(`[AFK] ${member.nickname || member.user.username}`);
+        } catch (error) {
+          console.error('Failed to set nickname:', error);
+        }
+
+        await interaction.reply({
+  flags: FLAGS.EPHEMERAL,
+          embeds: [
+            createHeizouEmbed(
+              'Status AFK Diaktifkan! 💤',
+              `Alasan: \`${reason}\`\nKetik pesan apa pun untuk menonaktifkan AFK`,
+              CONFIG.DESIGN.COLORS.SECONDARY
+            )
+          ],
+          components: [dismissButton]
+        });
+        break;
+      }
+
+      case 'invitelink': {
+        if (!interaction.channel.permissionsFor(interaction.guild.members.me).has('CREATE_INSTANT_INVITE')) {
+          return interaction.reply({
+    flags: FLAGS.EPHEMERAL,
+            content: '❌ Bot tidak punya izin buat invite link!',
+            components: [dismissButton]
+          });
+        }
+
+        const invite = await interaction.channel.createInvite({
+          maxAge: 86400,
+          maxUses: 1,
+          temporary: true
+        });
+
+        await interaction.reply({
+  flags: FLAGS.EPHEMERAL,
+          embeds: [
+            createHeizouEmbed(
+              '🔗 Link Undangan 24 Jam',
+              `**Link:** ${invite.url}\nSalin: \`${invite.url}\``,
+              CONFIG.DESIGN.COLORS.SECONDARY
+            )
+          ],
+          components: [dismissButton]
+        });
+        break;
+      }
+
+      case 'vbot': {
+        const iconAttachment = new AttachmentBuilder(CONFIG.DESIGN.IMAGES.ICON);
+        await interaction.reply({
+  flags: FLAGS.EPHEMERAL,
+          files: [iconAttachment],
+          embeds: [
+            createHeizouEmbed(
+              '🤖 Informasi Bot',
+              `**Versi:** ${CONFIG.BOT.VERSION}\n**Developer:** <@${CONFIG.USERS.RENREN}>`,
+              CONFIG.DESIGN.COLORS.INFO
+            ).setThumbnail('attachment://heizou_icon.png')
+          ],
+          components: [dismissButton]
+        });
+        break;
+      }
+
+      case 'status': {
+        if (!interaction.member.roles.cache.has(CONFIG.ROLES.STAFF)) {
+          return interaction.reply({
+    flags: FLAGS.EPHEMERAL,
+            content: '❌ Hanya staff yang bisa ubah status!',
+            components: [dismissButton]
+          });
+        }
+
+        const newStatus = interaction.options.getString('status');
+        adminStatus[interaction.user.id] = {
+          ...adminStatus[interaction.user.id],
+          status: newStatus
+        };
+
+        await interaction.reply({
+  flags: FLAGS.EPHEMERAL,
+          embeds: [
+            createHeizouEmbed(
+              'Status Diperbarui!',
+              `Status baru: \`${newStatus}\``,
+              CONFIG.DESIGN.COLORS.SECONDARY
+            )
+          ],
+          components: [dismissButton]
+        });
+        break;
+      }
+
+      case 'sociabuzz': {
+        const iconAttachment = new AttachmentBuilder(CONFIG.DESIGN.IMAGES.ICON);
+        await interaction.reply({
+  flags: FLAGS.EPHEMERAL,
+          files: [iconAttachment],
+          embeds: [
+            createHeizouEmbed(
+              '💌 Sociabuzz Admin',
+              `Dukung admin via:\n\n` +
+              `• [Atun](${CONFIG.LINKS.SOCIABUZZ.ATUN})\n` +
+              `• [Renren](${CONFIG.LINKS.SOCIABUZZ.RENREN})`,
+              CONFIG.DESIGN.COLORS.PRIMARY
+            ).setThumbnail('attachment://heizou_icon.png')
+          ],
+          components: [dismissButton]
+        });
+        break;
+      }
+
+      case 'giveaway': {
+        if (!interaction.member.roles.cache.has(CONFIG.ROLES.STAFF)) {
+          return interaction.reply({
+    flags: FLAGS.EPHEMERAL,
+            content: '❌ Hanya staff yang bisa buat giveaway!',
+            components: [dismissButton]
+          });
+        }
+
+        const prize = interaction.options.getString('prize');
+        const duration = interaction.options.getString('duration');
+        const giftIcon = new AttachmentBuilder(CONFIG.DESIGN.IMAGES.GIFT_ICON);
+
+        const giveawayEmbed = createHeizouEmbed(
+          '🎉 GIVEAWAY 🎉',
+          `**Hadiah:** ${prize}\n**Durasi:** ${duration}`,
+          CONFIG.DESIGN.COLORS.SECONDARY
+        ).setImage('attachment://gift_icon.png');
+
+        const channel = client.channels.cache.get(CONFIG.CHANNELS.GIVEAWAY);
+        const msg = await channel.send({
+          content: '@everyone',
+          embeds: [giveawayEmbed],
+          files: [giftIcon]
+        });
+        await msg.react('🎁');
+
+        await interaction.reply({
+  flags: FLAGS.EPHEMERAL,
+          content: `✅ Giveaway dibuat di ${channel}`,
+          components: [dismissButton]
+        });
+        break;
+      }
+
+      case 'check': {
+        await interaction.reply({
+  flags: FLAGS.EPHEMERAL,
+          content: `⏱️ Bot aktif selama: ${Math.floor(process.uptime())} detik`,
+          components: [dismissButton]
+        });
+        break;
+      }
+
+      case 'shutdown': {
+        if (interaction.user.id !== CONFIG.USERS.RENREN) {
+          return interaction.reply({
+    flags: FLAGS.EPHEMERAL,
+            content: '❌ Hanya owner yang bisa matikan bot!',
+            components: [dismissButton]
+          });
+        }
+
+        await interaction.reply({
+  flags: FLAGS.EPHEMERAL,
+          content: '🛑 Mematikan bot dalam 3 detik...',
+          components: [dismissButton]
+        });
+
+        setTimeout(() => {
+          client.destroy();
+          process.exit(0);
+        }, 3000);
+        break;
+      }
+
+      case 'bug': {
+        const description = interaction.options.getString('description');
+        const developer = await client.users.fetch(CONFIG.USERS.RENREN);
+        
+        await developer.send({
+          embeds: [
+            createHeizouEmbed(
+              '🐞 Laporan Bug Baru',
+              `**Pelapor:** <@${interaction.user.id}>\n` +
+              `**Server:** ${interaction.guild.name}\n` +
+              `**Deskripsi:**\n\`\`\`${description}\`\`\``,
+              CONFIG.DESIGN.COLORS.ERROR
+            )
+          ]
+        });
+
+        await interaction.reply({
+  flags: FLAGS.EPHEMERAL,
+          embeds: [
+            createHeizouEmbed(
+              'Laporan Terkirim!',
+              `Bug telah dilaporkan ke developer`,
+              CONFIG.DESIGN.COLORS.SECONDARY
+            )
+          ],
+          components: [dismissButton]
+        });
+        break;
+      }
+
+      default:
+        await interaction.reply({
+  flags: FLAGS.EPHEMERAL,
+          content: 'Command tidak dikenali! Ketik /help untuk melihat daftar command.',
+          components: [dismissButton]
+        });
     }
-
-    message.reply({
-      embeds: [createHeizouEmbed(
-        'Selamat Kembali! 🎉',
-        `Durasi AFK: **${duration} detik**\nAlasan: \`${data.reason}\``,
-        CONFIG.DESIGN.COLORS.SECONDARY
-      )]
+  } catch (error) {
+    console.error(`Error handling /${interaction.commandName}:`, error);
+    await interaction.reply({
+      ephemeral: true,
+      content: '❌ Terjadi kesalahan sistem saat memproses command!',
+      components: [dismissButton]
     });
   }
+});
 
-  const args = message.content.split(/ +/);
+// ===================== 🗑️ HANDLER TOMBOL DISMISS =====================
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isButton()) return;
+  
+  if (interaction.customId === 'dismiss') {
+    await interaction.update({
+      content: "Pesan ditutup ✅",
+      embeds: [],
+      components: []
+    });
+  }
+});
+
+// ===================== 📩 HANDLER PREFIX COMMANDS (!help, dll) =====================
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
+  if (!message.content.startsWith('!')) return;
+
+  const args = message.content.slice(1).trim().split(/ +/);
   const command = args.shift().toLowerCase();
+
+// Fungsi optimasi untuk auto-delete
+const autoDelete = async (msg, content, options = {}) => {
+    try {
+      const reply = await msg.reply(content, options);
+      setTimeout(async () => {
+        try {
+          await reply.delete();
+          await msg.delete(); // Hapus juga pesan trigger command
+        } catch (error) {
+          if (![10008, 50003].includes(error.code)) { // Abaikan error "Unknown Message" atau "Missing Access"
+            console.error('[Auto-Delete Error]', error.message); // Hanya log error penting
+          }
+        }
+      }, 30000);
+      return reply;
+    } catch (error) {
+      console.error('[Reply Error]', error.message); // Log singkat
+    }
+  };
 
   try {
     switch(command) {
-      case '!help': { // <-- Block scope
+      case 'help': {
         const iconAttachment = new AttachmentBuilder(CONFIG.DESIGN.IMAGES.ICON);
-        message.reply({
+        const helpMessage = `Halo <@${message.author.id}>! ini menunya. Jika ada yang ingin ditanya DM Admin <@${CONFIG.USERS.RENREN}>`;
+        
+        const reply = await message.reply({
           files: [iconAttachment],
           embeds: [
             createHeizouEmbed(
               'Menu Bantuan Lengkap',
-              CONFIG.MESSAGES.HELP.join('\n'),
+              `${helpMessage}\n\n${CONFIG.MESSAGES.HELP.join('\n').replaceAll('/', '!')}`,
               CONFIG.DESIGN.COLORS.SECONDARY
             ).setThumbnail('attachment://heizou_icon.png')
           ]
         });
-        break;
-      } // <-- Akhir scope
 
-      case '!shutdown': {
-        if (message.author.id !== CONFIG.USERS.RENREN) {
-          return message.reply({
-            embeds: [createHeizouEmbed(
-              '🚫 Akses Ditolak!',
-              'Hanya owner yang bisa menggunakan command ini!',
-              CONFIG.DESIGN.COLORS.ERROR
-            )]
-          });
-        }
-      
-        try {
-          // 1. Buat embed status shutdown
-          const shutdownEmbed = createHeizouEmbed(
-            '🔌 SHUTDOWN SEQUENCE INITIATED',
-            'Bot akan mati dalam **3 detik**...\n\n' +
-            '▫️ Status: `Memutus koneksi...`\n' +
-            '▫️ Aktivitas: `Membersihkan cache...`\n' +
-            `${CONFIG.DESIGN.EMOJI.BUG} **Developer**: <@${CONFIG.USERS.RENREN}>`,
-            CONFIG.DESIGN.COLORS.ERROR
-          )
-          .setThumbnail('attachment://heizou_icon.png');
-      
-          // 2. Kirim notifikasi ke channel status
-          const statusChannel = client.channels.cache.get(CONFIG.CHANNELS.STATUS);
-          if (statusChannel) {
-            await statusChannel.send({
-              embeds: [createHeizouEmbed(
-                '⚠️ BOT SHUTDOWN',
-                `${CONFIG.BOT.NAME} akan non-aktif!\n` +
-                `**Dimatikan oleh**: <@${message.author.id}>`,
-                CONFIG.DESIGN.COLORS.ERROR
-              )]
-            });
-          }
-      
-          // 3. Kirim embed ke user
-          await message.reply({ embeds: [shutdownEmbed] });
-      
-          // 4. Proses shutdown dengan delay
-          setTimeout(async () => {
-            try {
-              // Update status bot
-              await client.user.setPresence({ 
-                status: 'inactive',
-                activities: [{ 
-                  name: '🔌 Shutting Down...', 
-                  type: 4 // ActivityType.Custom
-                }] 
-              });
-      
-              // Destroy client dan exit
-              await client.destroy();
-              console.log(`🛑 ${CONFIG.BOT.NAME} dimatikan oleh ${message.author.tag}`);
-              process.exit(0);
-            } catch (error) {
-              console.error('Gagal mematikan bot:', error);
-              process.exit(1);
-            }
-          }, 3000);
-      
-        } catch (error) {
-          console.error('Error dalam proses shutdown:', error);
-          message.reply({
-            embeds: [createHeizouEmbed(
-              '⚠️ Gagal Mematikan!',
-              'Terjadi kesalahan internal saat mematikan bot',
-              CONFIG.DESIGN.COLORS.ERROR
-            )]
-          });
-        }
+        // Auto-delete after 30 seconds
+        setTimeout(() => reply.delete().catch(console.error), 30000);
         break;
       }
 
-      case '!check': {
-        return message.reply({
-          embeds: [createHeizouEmbed(
-            `Aplikasi telah berjalan selama: ${process.uptime()} detik`,
-            CONFIG.DESIGN.COLORS.ERROR
-          )]
-        });
-      }
+      // ... (Tambahkan handler untuk prefix command lainnya)
 
-  case '!invitelink': {
-    try {
-      if (!message.channel.permissionsFor(message.guild.members.me).has('CREATE_INSTANT_INVITE')) {
-        return message.reply({
-          embeds: [createHeizouEmbed(
-            'Izin Dibutuhkan!',
-            'Bot tidak memiliki izin membuat invite link di channel ini',
-            CONFIG.DESIGN.COLORS.ERROR
-          )]
-        });
-      }
-  
-      const invite = await message.channel.createInvite({
-        maxAge: 86400, // 24 jam
-        maxUses: 1,
-        temporary: true
-      });
-  
-      message.reply({
-        embeds: [createHeizouEmbed(
-          '🔗 Link Undangan 24 Jam',
-          `**Link undangan sekali pakai:**\n${invite.url}\n\n` +
-          'Salin teks di bawah ini:\n' +
-          `\`${invite.url}\``, // Format untuk mudah copy
-          CONFIG.DESIGN.COLORS.SECONDARY
-        ).addFields(
-          { name: '🕒 Masa Berlaku', value: '24 Jam', inline: true },
-          { name: '🚫 Max Penggunaan', value: '1 Kali', inline: true }
-        )]
-      });
-    } catch (error) {
-      console.error('Gagal membuat invite:', error);
-      message.reply({
-        embeds: [createHeizouEmbed(
-          'Terjadi Kesalahan!',
-          'Gagal membuat link undangan',
-          CONFIG.DESIGN.COLORS.ERROR
-        )]
-      });
-    }
-    break;
-  }
-
-        case '!afk':
-  const reason = args.join(' ') || 'Sedang AFK';
-  const originalNickname = message.member.nickname || message.author.username;
-
-  // Simpan data AFK
-  afkUsers[message.author.id] = {
-    timestamp: Date.now(),
-    reason: reason,
-    originalNickname: originalNickname
-  };
-
-  try {
-    // Update nickname
-    await message.member.setNickname(`[AFK] ${originalNickname}`);
-  } catch (error) {
-    console.error('Gagal mengubah nickname:', error);
-    return message.reply({
-      embeds: [createHeizouEmbed(
-        'Gagal Set AFK!',
-        'Bot tidak memiliki izin mengubah nickname',
-        CONFIG.DESIGN.COLORS.ERROR
-      )]
-    });
-  }
-
-  message.reply({
-    embeds: [createHeizouEmbed(
-      'Status AFK Diaktifkan! 💤',
-      `Alasan: \`${reason}\`\n` +
-      'Ketik pesan apa pun untuk menonaktifkan AFK',
-      CONFIG.DESIGN.COLORS.SECONDARY
-    )]
-  });
-  break;
-
-// Tambahkan handler mention AFK (di luar switch(command), sebelum command handler
-// Letakkan di bawah handler AFK return
-// 🍥 Handler AFK Mention
-const mentionedUsers = message.mentions.users;
-if (mentionedUsers.size > 0) {
-  mentionedUsers.forEach(user => {
-    if (afkUsers[user.id]) {
-      const afkData = afkUsers[user.id];
-      const duration = Math.floor((Date.now() - afkData.timestamp) / 1000);
-      
-      message.reply({
-        embeds: [createHeizouEmbed(
-          '👀 Orang Ini Sedang AFK!',
-          `<@${user.id}> sedang tidak aktif sejak **${duration} detik** lalu\n` +
-          `Alasan: \`${afkData.reason}\``,
-          CONFIG.DESIGN.COLORS.INFO
-        )]
-      });
-    }
-  });
-}
-break;
-
-case '!tiktok': {
-  const tiktokIcon = new AttachmentBuilder(CONFIG.DESIGN.IMAGES.TIKTOK_ICON);
-  message.reply({
-    files: [tiktokIcon],
-    embeds: [
-      createHeizouEmbed(
-        '📱 TikTok Resmi',
-        `**Daftar akun TikTok admin**:\n` +
-        `${CONFIG.DESIGN.EMOJI.LINK} **Renren**: [@ayniman4](${CONFIG.LINKS.TIKTOK_RENREN})\n` +
-        `${CONFIG.DESIGN.EMOJI.LINK} **Suki na Neko Official**: [@sukinaneko](${CONFIG.LINKS.TIKTOK_SUKINANEKO})`,
-        CONFIG.DESIGN.COLORS.SECONDARY
-      )
-      .setThumbnail('attachment://tiktok_icon.png')
-      .addFields( // ✅ Hapus ... dan tambahkan field yang valid
-        { 
-          name: '📌 Ayniman',
-          value: 'Followers: 303\nLikes: 570\nVideo: 5',
-          inline: true 
-        },
-        { 
-          name: '📌 Suki na Neko Official',
-          value: 'Followers: 344\nLikes: 50\nVideo: -', 
-          inline: true 
-        }
-      )
-    ]
-  });
-  break;
-}
-
-case '!vbot': { // ✅ Tambahkan block scope
-  const iconAttachment = new AttachmentBuilder(CONFIG.DESIGN.IMAGES.ICON);
-  message.reply({
-    files: [iconAttachment], // ✅ Kirim file
-    embeds: [
-      createHeizouEmbed(
-        '🤖 Informasi Bot',
-        `**Nama Bot:** ${CONFIG.BOT.NAME}\n` +
-        `**Versi:** ${CONFIG.BOT.VERSION}\n` +
-        `**Developer:** <@${CONFIG.USERS.RENREN}>\n` +
-        `**Bahasa Pemrograman:** JavaScript (Node.js ${process.version})\n\n` +
-        `**Powered by:** Deepseek https://deepseek.com`,
-        CONFIG.DESIGN.COLORS.INFO
-      )
-      .addFields(
-        { 
-          name: 'Fitur Utama', 
-          value: '• AFK System\n• Admin Tools\n• Social Integration\n• Utility Commands', 
-          inline: true 
-        },
-        { 
-          name: 'Sumber Daya', 
-          value: `[GitHub Repo](${CONFIG.LINKS.GITHUB})\n[Support Server](${CONFIG.LINKS.SUPPORT})`, 
-          inline: true 
-        }
-      )
-      .setThumbnail('attachment://heizou_icon.png') // ✅ Pakai attachment://
-    ]
-  });
-  break;
-}
-
-        case '!admin': {
-          // Hanya buat attachment untuk icon
-          const iconAttachment = new AttachmentBuilder(CONFIG.DESIGN.IMAGES.ICON);
-        
-          const adminFields = Object.values(CONFIG.USERS)
-            .filter(userId => adminStatus[userId])
-            .map(userId => ({
-              name: `${adminStatus[userId].status}`,
-              value: `${CONFIG.DESIGN.EMOJI.ADMIN} <@${userId}>\n**Jabatan:** ${adminStatus[userId].role}`,
-              inline: true
-            }));
-        
-          message.reply({
-            files: [iconAttachment], // ✅ Hanya kirim icon
-            embeds: [
-              createHeizouEmbed(
-                '🌸 Tim Administrator',
-                'Daftar admin dan status terkini:',
-                CONFIG.DESIGN.COLORS.PRIMARY
-              )
-              .setThumbnail('attachment://heizou_icon.png') // ✅ Pakai icon di thumbnail
-              .addFields(adminFields)
-            ]
-          });
-          break;
-        }
-
-          case '!giveaway':
-  // Cek role admin
-  if (!message.member.roles.cache.has(CONFIG.ROLES.STAFF)) {
-    return message.reply({
-      embeds: [createHeizouEmbed(
-        'Akses Ditolak!',
-        'Hanya staff yang bisa membuat giveaway',
-        CONFIG.DESIGN.COLORS.ERROR
-      )]
-    });
-  }
-
-  const argsString = args.join(' ');
-  const [duration, prize, ...rest] = argsString.split('|').map(s => s.trim());
-  
-  if (!duration || !prize || rest.length < 2) {
-    return message.reply({
-      embeds: [createHeizouEmbed(
-        'Format Giveaway Salah!',
-        'Contoh: `!giveaway 24h 1M Beli | Follow TikTok & Tag 3 Teman | Role Giveaway | 2023-12-31`\n' +
-        '**Struktur**:\n' +
-        '`!giveaway <durasi> <hadiah> | <syarat> | <jenis> | <tanggal_berakhir>`',
-        CONFIG.DESIGN.COLORS.ERROR
-      )]
-    });
-  }
-
-  try {
-    const [requirements, type, endDate] = rest;
-    
-    const giveawayEmbed = createHeizouEmbed(
-      '🎉 **GIVEAWAY RESMI** 🎉',
-      `**Host**: <@${message.author.id}>\n` +
-      `**Hadiah**: ${prize}\n` +
-      `**Jenis**: ${type}\n` +
-      `**Berakhir Pada**: ${endDate || 'Tidak ditentukan'}`,
-      CONFIG.DESIGN.COLORS.SECONDARY
-    )
-    .addFields(
-      { name: '⏳ Durasi', value: duration, inline: true },
-      { name: '📜 Persyaratan', value: requirements, inline: true }
-    )
-    .setImage('attachment://Gift.gif')
-    .setFooter({ 
-      text: `Giveaway dibuat oleh ${message.author.username}`, 
-      iconURL: message.author.displayAvatarURL() 
-    });
-
-    const giveawayChannel = client.channels.cache.get(CONFIG.CHANNELS.GIVEAWAY);
-    const sentMessage = await giveawayChannel.send({ 
-      content: '@everyone',
-      embeds: [giveawayEmbed] 
-    });
-    
-    await sentMessage.react('🎁');
-    
-    message.reply({
-      embeds: [createHeizouEmbed(
-        'Giveaway Berhasil Dibuat! ✅',
-        `Giveaway telah diposting di ${giveawayChannel}\n` +
-        `➤ [Link Giveaway](${sentMessage.url})`,
-        CONFIG.DESIGN.COLORS.SECONDARY
-      )]
-    });
-
-  } catch (error) {
-    console.error('Error membuat giveaway:', error);
-    message.reply({
-      embeds: [createHeizouEmbed(
-        'Gagal Membuat Giveaway!',
-        'Pastikan format sudah benar dan bot memiliki akses yang cukup',
-        CONFIG.DESIGN.COLORS.ERROR
-      )]
-    });
-  }
-  break;
-
-          case '!bug':
-  const bugDescription = args.join(' ');
-  if (!bugDescription) {
-    return message.reply({
-      embeds: [createHeizouEmbed(
-        'Format Laporan Bug!',
-        'Contoh: `!bug (deskripsi error)`\nContoh: `!bug Role tidak bisa dilepas`',
-        CONFIG.DESIGN.COLORS.ERROR
-      )]
-    });
-  }
-
-  try {
-    // Mengirim ke DM Developer
-    const developer = await client.users.fetch(CONFIG.USERS.RENREN);
-    await developer.send({
-      embeds: [createHeizouEmbed(
-        `${CONFIG.DESIGN.EMOJI.BUG} LAPORAN BUG BARU`,
-        `**Pelapor**: <@${message.author.id}>\n` +
-        `**Server**: ${message.guild?.name || 'DM'}\n` +
-        `**Deskripsi**:\n\`\`\`${bugDescription}\`\`\``,
-        CONFIG.DESIGN.COLORS.ERROR
-      ).addFields(
-        { 
-          name: '🕒 Waktu', 
-          value: `<t:${Math.floor(Date.now()/1000)}:R>`, 
-          inline: true 
-        },
-        { 
-          name: '📌 ID Laporan', 
-          value: `\`${message.id.slice(-6)}\``, 
-          inline: true 
-        }
-      )]
-    });
-
-    // Konfirmasi ke user
-    message.reply({
-      embeds: [createHeizouEmbed(
-        'Laporan Terkirim! 📨',
-        `Laporan bug telah dikirim ke DM developer\n` +
-        `➤ ID Laporan: \`${message.id.slice(-6)}\``,
-        CONFIG.DESIGN.COLORS.SECONDARY
-      )]
-    });
-
-  } catch (error) {
-    console.error('Gagal mengirim DM:', error);
-    message.reply({
-      embeds: [createHeizouEmbed(
-        'Gagal Mengirim!',
-        'Tidak bisa mengirim laporan ke developer\n' +
-        'Silakan coba lagi nanti atau tag @Renren',
-        CONFIG.DESIGN.COLORS.ERROR
-      )]
-    });
-  }
-  break;
-
-      case '!status':
-        if (!message.member.roles.cache.has(CONFIG.ROLES.STAFF)) {
-          return message.reply({
-            embeds: [createHeizouEmbed(
-              'Akses Ditolak!',
-              'Hanya staff yang bisa update status',
+      default:
+        const reply = await message.reply({
+          embeds: [
+            createHeizouEmbed(
+              'Command Tidak Dikenal',
+              'Gunakan !help untuk melihat menu bantuan',
               CONFIG.DESIGN.COLORS.ERROR
-            )]
-          });
-        }
-
-        const newStatus = args.join(' ');
-        if (!newStatus) {
-          return message.reply({
-            embeds: [createHeizouEmbed(
-              'Format Salah!',
-              'Contoh: `!status 🟢 Sedang online`',
-              CONFIG.DESIGN.COLORS.ERROR
-            )]
-          });
-        }
-
-        adminStatus[message.author.id] = {
-          ...adminStatus[message.author.id],
-          status: newStatus
-        };
-
-        message.reply({
-          embeds: [createHeizouEmbed(
-            'Status Diperbarui! ✅',
-            `Status baru: \`${newStatus}\``,
-            CONFIG.DESIGN.COLORS.SECONDARY
-          )]
+            )
+          ]
         });
-        break;
-
-        case '!sociabuzz': {
-          // 1. Buat attachment untuk icon
-          const iconAttachment = new AttachmentBuilder(CONFIG.DESIGN.IMAGES.ICON);
-        
-          // 2. Kirim embed dengan tautan Sociabuzz
-          message.reply({
-            files: [iconAttachment],
-            embeds: [
-              createHeizouEmbed(
-                '💌 Dukungan via Sociabuzz',
-                `Bantu admin berkembang dengan memberikan dukungan:\n\n` +
-                `${CONFIG.DESIGN.EMOJI.ADMIN} **Atun**: [Klik di sini](${CONFIG.LINKS.SOCIABUZZ.ATUN})\n` +
-                `${CONFIG.DESIGN.EMOJI.ADMIN} **Renren**: [Klik di sini](${CONFIG.LINKS.SOCIABUZZ.RENREN})\n\n` +
-                `➤ Status donasi: <#${CONFIG.CHANNELS.TRANSACTIONS}>`,
-                CONFIG.DESIGN.COLORS.PRIMARY
-              )
-              .setThumbnail('attachment://heizou_icon.png')
-            ]
-          });
-          break;
-        }
-
-      // ... command lainnya
+        setTimeout(() => reply.delete().catch(console.error), 3000);
     }
   } catch (error) {
-    console.error('Error:', error);
-    const errorIcon = new AttachmentBuilder(CONFIG.DESIGN.IMAGES.ERROR_ICON); // ✅
-    message.reply({
-      files: [errorIcon], // ✅ Kirim PNG sebagai attachment
-      embeds: [
-        createHeizouEmbed(
-          '⚠️ Terjadi Kesalahan!',
-          'Silakan coba lagi atau laporkan bug',
-          CONFIG.DESIGN.COLORS.ERROR
-        )
-        .setThumbnail('attachment://error_icon.png') // ✅ Referensi attachment PNG
-      ]
-    });
+    console.error('Error handling prefix command:', error);
   }
 });
 

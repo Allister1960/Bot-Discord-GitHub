@@ -1,6 +1,6 @@
 {
   "name": "Discord Bot",
-  "version": "Sakura Edition v1.1",
+  "version": "Sakura Edition v1.2",
   "description": "Bot Discord Suki na Neko",
   "main": "index.js",
   "scripts": {
@@ -9,6 +9,6 @@
   "dependencies": {
     "discord.js": "^14.18.0",
     "dotenv": "^16.4.7",
-    "surge": "^0.24.6"
+    "surge": "^0.0.0"
   }
 }
